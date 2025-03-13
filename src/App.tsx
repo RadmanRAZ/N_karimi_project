@@ -44,22 +44,13 @@ const ChartComponent: React.FC<ChartComponentProps> = ({ file }) => {
   const [data, setData] = useState<LineChartData[]>([])
   const [barData, setBarData] = useState<BarChartData[]>([])
   const [treemapData, setTreemapData] = useState<TreemapData[]>([])
+  const [salesData, setSalesData] = useState<any[]>([])
+  const [pieData, setPieData] = useState<any[]>([])
 
-  const dataTable = [
-    { دسته: "فلزی", ماه: "فروردین", فروش_داخلی: 1000, صادرات: 400 },
-    { دسته: "فلزی", ماه: "اردیبهشت", فروش_داخلی: 1200, صادرات: 100 },
-    { دسته: "پالایشی", ماه: "فروردین", فروش_داخلی: 2400, صادرات: 0 },
-    { دسته: "پالایشی", ماه: "اردیبهشت", فروش_داخلی: 1800, صادرات: 200 },
-    { دسته: "معدنی", ماه: "فروردین", فروش_داخلی: 1600, صادرات: 0 },
-    { دسته: "معدنی", ماه: "اردیبهشت", فروش_داخلی: 1700, صادرات: 100 },
-  ];
+ 
 
-  const pieData = [
-    { name: "فروش داخلی", value: data.reduce((acc, item) => acc + item.فروش_داخلی, 0) },
-    { name: "صادرات", value: data.reduce((acc, item) => acc + item.صادرات, 0) },
-  ];
 
-  const COLORS = ["#0088FE", "#FFBB28"];
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -69,6 +60,37 @@ const ChartComponent: React.FC<ChartComponentProps> = ({ file }) => {
       const sheetName = workbook.SheetNames[0]
       const sheet = workbook.Sheets[sheetName]
       const jsonData = XLSX.utils.sheet_to_json(sheet)
+      const monthMapping: { [key: number]: string } = {
+        1: "فروردین",
+        2: "اردیبهشت",
+        3: "خرداد",
+        4: "تیر",
+        5: "مرداد",
+        6: "شهریور",
+        7: "مهر",
+        8: "آبان",
+        9: "آذر",
+        10: "دی",
+        11: "بهمن",
+        12: "اسفند",
+      }
+
+      // Transform data for the sales comparison bar chart
+      const transformedSalesData = jsonData.map((row: any) => ({
+        دسته: row["دسته کسب و کار"],
+        ماه: row["ماه"],
+        فروش_داخلی: row["فروش داخلی (ریال)"] || 0,
+        صادرات: row["صادرات"] || 0,
+      }))
+      setSalesData(transformedSalesData)
+
+      // Transform data for the pie chart (sales ratio)
+      const totalDomestic = jsonData.reduce((acc: number, row: any) => acc + (row["فروش داخلی (ریال)"] || 0), 0)
+      const totalExports = jsonData.reduce((acc: number, row: any) => acc + (row["صادرات"] || 0), 0)
+      setPieData([
+        { name: "فروش داخلی", value: totalDomestic },
+        { name: "صادرات", value: totalExports },
+      ])
 
       // Transform data for the Line Chart (trend analysis)
       const groupedData: { [key: string]: { time: string;[key: string]: any } } = {}
@@ -78,6 +100,9 @@ const ChartComponent: React.FC<ChartComponentProps> = ({ file }) => {
         groupedData[key][row["دسته کسب و کار"]] = row["فروش داخلی (حجمی)"]
       })
       setData(Object.values(groupedData))
+      
+
+      
 
       // Transform data for the Bar Chart (total sales per category)
       const categorySales: { [key: string]: number } = {}
@@ -93,6 +118,7 @@ const ChartComponent: React.FC<ChartComponentProps> = ({ file }) => {
       }))
       setTreemapData(treemapCategories)
     }
+    
 
     fetchData()
   }, [file])
@@ -123,6 +149,7 @@ const ChartComponent: React.FC<ChartComponentProps> = ({ file }) => {
     )
   }
 
+  const COLORS = ["#0088FE", "#FFBB28"]
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
       <div className="bg-white p-4 rounded-lg shadow-md">
@@ -171,15 +198,15 @@ const ChartComponent: React.FC<ChartComponentProps> = ({ file }) => {
       </div>
       <div className="bg-white p-4 rounded-lg shadow-md">
         <h2 className="text-xl font-bold">نمودار فروش داخلی و صادرات</h2>
-        <ResponsiveContainer width="80%" height={300}>
-          <BarChart data={dataTable} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={salesData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="ماه" />
             <YAxis />
             <Tooltip />
             <Legend />
-            <Bar dataKey="فروش_داخلی" fill="#8884d8" name="فروش داخلی" />
-            <Bar dataKey="صادرات" fill="#82ca9d" name="صادرات" />
+            <Bar dataKey="فروش_داخلی" fill="#3b82f6" name="فروش داخلی" barSize={60} />
+            <Bar dataKey="صادرات" fill="#ffbb28" name="صادرات" barSize={50} />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -189,7 +216,7 @@ const ChartComponent: React.FC<ChartComponentProps> = ({ file }) => {
 
         <ResponsiveContainer width="50%" height={300}>
           <PieChart>
-            <Pie data={dataTable} cx="50%" cy="50%" outerRadius={100} fill="#8884d8" dataKey="value">
+            <Pie data={pieData} cx="50%" cy="50%" outerRadius={100} fill="#8884d8" dataKey="value">
               {pieData.map((_, index) => (
                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
               ))}
