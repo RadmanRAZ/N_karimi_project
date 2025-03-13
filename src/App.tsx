@@ -190,7 +190,7 @@ const ChartComponent: React.FC<ChartComponentProps> = ({ file }) => {
         <ResponsiveContainer width="50%" height={300}>
           <PieChart>
             <Pie data={dataTable} cx="50%" cy="50%" outerRadius={100} fill="#8884d8" dataKey="value">
-              {pieData.map((entry, index) => (
+              {pieData.map((_, index) => (
                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
               ))}
             </Pie>
